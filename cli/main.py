@@ -16,18 +16,34 @@ def _kill_existing() -> bool:
     """Kill any running share-forge / share-forge-cli processes. Returns True if any killed."""
     import subprocess
     killed = False
-    for name in (PROC_NAME, f"{PROC_NAME}-cli"):
-        try:
-            result = subprocess.run(
-                ["pkill", "-f", name],
-                capture_output=True
-            )
-            if result.returncode == 0:
-                print(f"[*] Killed: {name}")
-                killed = True
-        except FileNotFoundError:
-            # pkill not available (Windows?) — fallback
-            pass
+
+    if sys.platform == "win32":
+        # Windows: use taskkill by image name (.exe)
+        for name in (f"{PROC_NAME}.exe", f"{PROC_NAME}-cli.exe"):
+            try:
+                result = subprocess.run(
+                    ["taskkill", "/F", "/IM", name],
+                    capture_output=True
+                )
+                if result.returncode == 0:
+                    print(f"[*] Killed: {name}")
+                    killed = True
+            except FileNotFoundError:
+                pass
+    else:
+        # Unix: use pkill by process name pattern
+        for name in (PROC_NAME, f"{PROC_NAME}-cli"):
+            try:
+                result = subprocess.run(
+                    ["pkill", "-f", name],
+                    capture_output=True
+                )
+                if result.returncode == 0:
+                    print(f"[*] Killed: {name}")
+                    killed = True
+            except FileNotFoundError:
+                pass
+
     return killed
 
 

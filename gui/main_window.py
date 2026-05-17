@@ -18,7 +18,23 @@ from core import create_app, DEFAULT_PORT, get_local_ip, is_port_free, find_free
 
 
 # ── Font constants ────────────────────────────────────────────────────────────
-MONO        = "Cascadia Code"
+# "Cascadia Code" ships with Windows Terminal; fall back to Consolas (always
+# available on Windows) or the generic monospace on other platforms.
+def _pick_mono() -> str:
+    candidates = ["Cascadia Code", "Consolas", "Courier New", "Monospace"]
+    try:
+        from PyQt6.QtGui import QFontDatabase
+        available = set(QFontDatabase.families())
+        for f in candidates:
+            if f in available:
+                return f
+    except Exception:
+        pass
+    import sys as _sys
+    return "Consolas" if _sys.platform == "win32" else "Monospace"
+
+
+MONO        = _pick_mono()
 SZ_TITLE    = 36
 SZ_SECTION  = 24
 SZ_LABEL    = 22
