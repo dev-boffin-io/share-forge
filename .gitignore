@@ -1,0 +1,75 @@
+# ── Python ────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+MANIFEST
+
+# ── Virtual environments ───────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ── PyInstaller ────────────────────────────────────
+*.spec
+build/
+dist/
+
+# ── PyQt6 / Qt ────────────────────────────────────
+*.qmlc
+*.jsc
+
+# ── OS files ──────────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+.nfs*
+
+# ── Editors & IDEs ────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.kate-swp
+
+# ── Logs & temp ───────────────────────────────────
+*.log
+*.tmp
+*.bak
+*.swp
+
+# ── Compiled binaries (project output) ────────────
+bin/
+share-forge
+share-forge-cli
