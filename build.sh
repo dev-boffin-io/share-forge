@@ -49,6 +49,7 @@ pyinstaller \
 # ── Move binaries to bin/ ─────────────────────────
 echo "[*] Moving binaries to ${BIN_DIR}/..."
 mkdir -p "${BIN_DIR}"
+rm -f "${BIN_DIR}/${PROJECT}" "${BIN_DIR}/${PROJECT}-cli"
 mv "${DIST_DIR}/${PROJECT}"     "${BIN_DIR}/${PROJECT}"
 mv "${DIST_DIR}/${PROJECT}-cli" "${BIN_DIR}/${PROJECT}-cli"
 

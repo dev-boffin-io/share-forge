@@ -54,6 +54,8 @@ if errorlevel 1 ( echo [!] CLI build failed. & exit /b 1 )
 :: ── Move binaries to bin\ ─────────────────────────
 echo [*] Moving binaries to %BIN_DIR%\...
 if not exist %BIN_DIR% mkdir %BIN_DIR%
+if exist "%BIN_DIR%\%PROJECT%.exe"     del /Q "%BIN_DIR%\%PROJECT%.exe"
+if exist "%BIN_DIR%\%PROJECT%-cli.exe" del /Q "%BIN_DIR%\%PROJECT%-cli.exe"
 move /Y "%DIST_DIR%\%PROJECT%.exe"     "%BIN_DIR%\%PROJECT%.exe"
 move /Y "%DIST_DIR%\%PROJECT%-cli.exe" "%BIN_DIR%\%PROJECT%-cli.exe"
 

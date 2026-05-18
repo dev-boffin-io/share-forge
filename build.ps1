@@ -50,6 +50,8 @@ if ($LASTEXITCODE -ne 0) { Write-Error "[!] CLI build failed."; exit 1 }
 # ── Move binaries to bin\ ─────────────────────────
 Write-Host "[*] Moving binaries to $BIN_DIR\..."
 New-Item -ItemType Directory -Force -Path $BIN_DIR | Out-Null
+Remove-Item -Force "$BIN_DIR\$PROJECT.exe"     -ErrorAction SilentlyContinue
+Remove-Item -Force "$BIN_DIR\$PROJECT-cli.exe" -ErrorAction SilentlyContinue
 Move-Item -Force "$DIST_DIR\$PROJECT.exe"     "$BIN_DIR\$PROJECT.exe"
 Move-Item -Force "$DIST_DIR\$PROJECT-cli.exe" "$BIN_DIR\$PROJECT-cli.exe"
 
