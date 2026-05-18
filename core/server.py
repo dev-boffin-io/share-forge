@@ -2,6 +2,7 @@
 import os
 import io
 import zipfile
+import mimetypes
 
 from flask import Flask, request, send_from_directory, render_template_string, redirect, url_for, send_file
 
@@ -10,6 +11,36 @@ from .template import HTML_TEMPLATE
 
 # Computed once at import time
 _SELF_BINARY_NAMES: set[str] = get_self_binary_names()
+
+# Extensions that are truly binary — browser will download
+_BINARY_EXTS: set[str] = {
+    '.exe', '.dll', '.so', '.dylib', '.bin', '.img', '.iso',
+    '.zip', '.tar', '.gz', '.bz2', '.xz', '.7z', '.rar',
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+    '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.svg',
+    '.mp3', '.mp4', '.mkv', '.avi', '.mov', '.wav', '.flac', '.ogg',
+    '.ttf', '.woff', '.woff2', '.eot',
+    '.pyc', '.pyd', '.pyo',
+    '.db', '.sqlite', '.sqlite3',
+}
+
+def _get_mimetype(filename: str, force_download: bool = False) -> str:
+    """
+    Determine MIME type:
+    - force_download=True  → application/octet-stream (triggers browser download)
+    - Known binary ext     → mime from mimetypes or octet-stream
+    - Everything else      → text/plain (browser displays inline)
+    """
+    if force_download:
+        return 'application/octet-stream'
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in _BINARY_EXTS:
+        mime, _ = mimetypes.guess_type(filename)
+        return mime or 'application/octet-stream'
+    mime, _ = mimetypes.guess_type(filename)
+    if mime and mime.startswith('text/'):
+        return mime
+    return 'text/plain; charset=utf-8'
 
 
 def create_app(shared_dir: str) -> Flask:
@@ -49,12 +80,29 @@ def create_app(shared_dir: str) -> Flask:
             return "Not found", 404
 
         if os.path.isfile(abs_path):
-            return send_from_directory(os.path.dirname(abs_path), os.path.basename(abs_path))
+            mime = _get_mimetype(os.path.basename(abs_path))
+            return send_from_directory(
+                os.path.dirname(abs_path),
+                os.path.basename(abs_path),
+                mimetype=mime,
+            )
 
         files = _list_dir(abs_path, req_path)
         parent_dir = os.path.dirname(req_path) if req_path else ''
         return render_template_string(
             HTML_TEMPLATE, files=files, req_path=req_path, parent_dir=parent_dir
+        )
+
+    @app.route('/download_file/<path:req_path>')
+    def download_file(req_path):
+        """Force-download a single file regardless of type."""
+        abs_path = _safe_abs(req_path)
+        if abs_path is None or not os.path.exists(abs_path) or not os.path.isfile(abs_path):
+            return "Not found", 404
+        return send_from_directory(
+            os.path.dirname(abs_path),
+            os.path.basename(abs_path),
+            as_attachment=True,
         )
 
     @app.route('/download_zip/', defaults={'req_path': ''})

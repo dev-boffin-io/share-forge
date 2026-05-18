@@ -84,7 +84,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .file-list li:first-child:hover { background: #22253a; }
 
         .item-left { display: flex; align-items: center; gap: 10px; }
-        .item-right { display: flex; align-items: center; gap: 10px; }
+        .item-right { display: flex; align-items: center; gap: 8px; }
 
         a { text-decoration: none; color: var(--accent); }
         a:hover { text-decoration: underline; }
@@ -95,12 +95,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-size: 0.75rem; color: var(--muted); background: var(--border);
             padding: 2px 8px; border-radius: 10px;
         }
-        .btn-zip {
+        .btn-small {
             font-size: 0.75rem; padding: 3px 10px; border-radius: 4px;
             background: #2a2d3a; color: var(--muted); text-decoration: none;
             border: 1px solid var(--border);
         }
-        .btn-zip:hover { background: var(--border); color: var(--text); text-decoration: none; }
+        .btn-small:hover { background: var(--border); color: var(--text); text-decoration: none; }
+        .btn-dl {
+            font-size: 0.75rem; padding: 3px 10px; border-radius: 4px;
+            background: #1e2f1e; color: var(--green); text-decoration: none;
+            border: 1px solid #2a4a2a;
+        }
+        .btn-dl:hover { background: #253525; color: var(--green); text-decoration: none; }
         .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 0.9rem; }
     </style>
 </head>
@@ -143,9 +149,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             </div>
             <div class="item-right">
                 {% if item.is_dir %}
-                    <a class="btn-zip" href="{{ url_for('download_zip', req_path=item.rel_path) }}" title="Download as ZIP">⬇ ZIP</a>
+                    <a class="btn-small" href="{{ url_for('download_zip', req_path=item.rel_path) }}" title="Download as ZIP">⬇ ZIP</a>
                 {% else %}
                     <span class="badge">{{ item.size }} KB</span>
+                    <a class="btn-dl" href="{{ url_for('download_file', req_path=item.rel_path) }}" title="Download file">⬇</a>
                 {% endif %}
             </div>
         </li>
