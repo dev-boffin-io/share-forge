@@ -28,10 +28,10 @@ jobs:
           pip install pyqt6 pyqt6-qt6 pyqt6-sip
           pip install pyinstaller
 
-      - name: 🔨 Build GUI binary (share-forge.exe)
+      - name: 🔨 Build GUI (share-forge folder)
         run: |
           pyinstaller `
-            --onefile `
+            --onedir `
             --name "share-forge" `
             --windowed `
             --collect-all PyQt6 `
@@ -41,27 +41,28 @@ jobs:
             --add-data "gui;gui" `
             main.py
 
-      - name: 🔨 Build CLI binary (share-forge-cli.exe)
+      - name: 🔨 Build CLI (share-forge-cli folder)
         run: |
           pyinstaller `
-            --onefile `
+            --onedir `
             --name "share-forge-cli" `
             --collect-all flask `
             --collect-all werkzeug `
             --add-data "core;core" `
             cli/main.py
 
-      - name: 📁 Collect binaries
+      - name: 📦 Zip outputs
         run: |
-          mkdir bin
-          move dist\share-forge.exe     bin\share-forge.exe
-          move dist\share-forge-cli.exe bin\share-forge-cli.exe
+          Compress-Archive -Path dist\share-forge     -DestinationPath dist\share-forge.zip
+          Compress-Archive -Path dist\share-forge-cli -DestinationPath dist\share-forge-cli.zip
 
       - name: 📤 Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: share-forge-windows
-          path: bin/
+          path: |
+            dist/share-forge.zip
+            dist/share-forge-cli.zip
           retention-days: 30
 
   release:
@@ -78,12 +79,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: share-forge-windows
-          path: bin/
+          path: dist/
 
       - name: 🏷️ Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bin/share-forge.exe
-            bin/share-forge-cli.exe
+            dist/share-forge.zip
+            dist/share-forge-cli.zip
           generate_release_notes: true
