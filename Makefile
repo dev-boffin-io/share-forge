@@ -15,6 +15,7 @@ PREFIX      ?= $(HOME)/.local
 BINDIR      := $(PREFIX)/bin
 APPDIR      := $(HOME)/.local/share/applications
 ICONDIR     := $(HOME)/.local/share/icons/hicolor/256x256/apps
+ICON_THEME  := $(HOME)/.local/share/icons/hicolor
 
 BIN_DIR     := bin
 DIST_DIR    := dist
@@ -90,6 +91,7 @@ build: deps
 		--hidden-import werkzeug \
 		cli/main.py
 	@mkdir -p $(BIN_DIR)
+	@rm -f $(GUI_BIN) $(CLI_BIN)
 	@mv $(DIST_DIR)/$(PROJECT)     $(GUI_BIN)
 	@mv $(DIST_DIR)/$(PROJECT)-cli $(CLI_BIN)
 	@rm -rf build dist *.spec
@@ -107,25 +109,35 @@ install:
 	@cp $(GUI_BIN)  $(BINDIR)/$(PROJECT)
 	@cp $(CLI_BIN)  $(BINDIR)/$(PROJECT)-cli
 	@chmod +x $(BINDIR)/$(PROJECT) $(BINDIR)/$(PROJECT)-cli
+
+	@echo "[*] Installing icon..."
+	@mkdir -p $(ICONDIR)
+	@cp assets/$(PROJECT).png $(ICONDIR)/$(PROJECT).png
+	@if command -v gtk-update-icon-cache >/dev/null 2>&1; then \
+		gtk-update-icon-cache -f -t $(ICON_THEME); \
+		echo "[✓] Icon cache updated."; \
+	elif command -v gtk4-update-icon-cache >/dev/null 2>&1; then \
+		gtk4-update-icon-cache -f -t $(ICON_THEME); \
+		echo "[✓] Icon cache updated (gtk4)."; \
+	else \
+		echo "[~] gtk-update-icon-cache not found — icon may not appear immediately."; \
+	fi
+
 	@echo "[*] Installing .desktop entry..."
 	@mkdir -p $(APPDIR)
 	@printf '[Desktop Entry]\nVersion=1.0\nType=Application\nName=Share Forge\nGenericName=LAN File Server\nComment=Browse, upload, and download files over LAN\nExec=%s\nIcon=%s\nTerminal=false\nCategories=Network;FileTransfer;\nKeywords=share;file;lan;server;network;\nStartupNotify=true\n' \
 		"$(BINDIR)/$(PROJECT)" "$(PROJECT)" \
 		> $(APPDIR)/$(PROJECT).desktop
-	@if [ -f assets/$(PROJECT).png ]; then \
-		echo "[*] Installing icon..."; \
-		mkdir -p $(ICONDIR); \
-		cp assets/$(PROJECT).png $(ICONDIR)/$(PROJECT).png; \
-	else \
-		echo "[~] No icon found at assets/$(PROJECT).png — skipping."; \
-	fi
+	@chmod +x $(APPDIR)/$(PROJECT).desktop
 	@if command -v update-desktop-database >/dev/null 2>&1; then \
 		update-desktop-database $(APPDIR); \
 	fi
+
 	@echo ""
 	@echo "[✓] Installed:"
 	@echo "    Binary  →  $(BINDIR)/$(PROJECT)"
 	@echo "    CLI     →  $(BINDIR)/$(PROJECT)-cli"
+	@echo "    Icon    →  $(ICONDIR)/$(PROJECT).png"
 	@echo "    Desktop →  $(APPDIR)/$(PROJECT).desktop"
 	@echo ""
 
@@ -137,6 +149,9 @@ uninstall:
 	@rm -f $(BINDIR)/$(PROJECT)-cli
 	@rm -f $(APPDIR)/$(PROJECT).desktop
 	@rm -f $(ICONDIR)/$(PROJECT).png
+	@if command -v gtk-update-icon-cache >/dev/null 2>&1; then \
+		gtk-update-icon-cache -f -t $(ICON_THEME) 2>/dev/null || true; \
+	fi
 	@if command -v update-desktop-database >/dev/null 2>&1; then \
 		update-desktop-database $(APPDIR) 2>/dev/null || true; \
 	fi
