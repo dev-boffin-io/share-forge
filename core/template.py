@@ -12,21 +12,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             --surface: #1a1d27;
             --border: #2a2d3a;
             --accent: #5c8aff;
-            --accent-dim: #3a5acc;
             --text: #e2e4ef;
             --muted: #7a7e94;
             --green: #3dba74;
             --orange: #f5a623;
-            --red: #e05c5c;
             --dir-color: #f5a623;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            padding: 24px;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; padding: 24px;
         }
         .container { max-width: 900px; margin: auto; }
         .header {
@@ -34,11 +30,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 20px;
             flex-wrap: wrap; gap: 12px;
         }
-        .header-title {
-            font-size: 1.1rem; font-weight: 600; color: var(--accent);
-            display: flex; align-items: center; gap: 8px;
+        /* ── Breadcrumb ── */
+        .breadcrumb {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 1rem; font-weight: 600; flex-wrap: wrap;
         }
-        .header-title span { color: var(--muted); font-weight: 400; }
+        .breadcrumb a {
+            color: var(--accent); text-decoration: none;
+        }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb .sep { color: var(--muted); padding: 0 2px; }
+        .breadcrumb .current { color: var(--muted); font-weight: 400; }
+
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
         .btn {
             padding: 7px 14px; border-radius: 6px; font-size: 0.82rem;
@@ -47,13 +50,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         .btn:hover { opacity: 0.8; text-decoration: none; }
         .btn-primary { background: var(--accent); color: #fff; }
-        .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
         .btn-home { background: #1e4a3a; color: var(--green); border: 1px solid #2a6a50; }
 
         .upload-zone {
             background: var(--surface); border: 1px dashed var(--border);
             border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;
-            display: flex; align-items: center; gap: 12px;
         }
         .upload-zone form { display: flex; gap: 10px; align-items: center; width: 100%; flex-wrap: wrap; }
         .upload-zone input[type="file"] {
@@ -62,8 +63,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         .upload-zone input[type="file"]::file-selector-button {
             background: var(--border); color: var(--text); border: none;
-            padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: inherit;
-            margin-right: 10px;
+            padding: 6px 12px; border-radius: 4px; cursor: pointer; font-family: inherit; margin-right: 10px;
         }
         .btn-upload {
             background: var(--green); color: #0a1a12; border: none;
@@ -75,36 +75,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .file-list { list-style: none; }
         .file-list li {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 11px 14px; border-bottom: 1px solid var(--border);
-            transition: background 0.1s;
+            padding: 11px 14px; border-bottom: 1px solid var(--border); transition: background 0.1s;
         }
         .file-list li:first-child { border-radius: 8px 8px 0 0; background: var(--surface); }
         .file-list li:last-child { border-radius: 0 0 8px 8px; border-bottom: none; }
         .file-list li:hover { background: var(--surface); }
-        .file-list li:first-child:hover { background: #22253a; }
-
         .item-left { display: flex; align-items: center; gap: 10px; }
         .item-right { display: flex; align-items: center; gap: 8px; }
-
         a { text-decoration: none; color: var(--accent); }
         a:hover { text-decoration: underline; }
         .dir-link { color: var(--dir-color); font-weight: 600; }
         .back-link { color: var(--muted); }
-
         .badge {
             font-size: 0.75rem; color: var(--muted); background: var(--border);
             padding: 2px 8px; border-radius: 10px;
         }
         .btn-small {
             font-size: 0.75rem; padding: 3px 10px; border-radius: 4px;
-            background: #2a2d3a; color: var(--muted); text-decoration: none;
-            border: 1px solid var(--border);
+            background: #2a2d3a; color: var(--muted); text-decoration: none; border: 1px solid var(--border);
         }
         .btn-small:hover { background: var(--border); color: var(--text); text-decoration: none; }
         .btn-dl {
             font-size: 0.75rem; padding: 3px 10px; border-radius: 4px;
-            background: #1e2f1e; color: var(--green); text-decoration: none;
-            border: 1px solid #2a4a2a;
+            background: #1e2f1e; color: var(--green); text-decoration: none; border: 1px solid #2a4a2a;
         }
         .btn-dl:hover { background: #253525; color: var(--green); text-decoration: none; }
         .empty { text-align: center; color: var(--muted); padding: 30px; font-size: 0.9rem; }
@@ -113,9 +106,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
 <div class="container">
     <div class="header">
-        <div class="header-title">
-            🔗 share-forge <span>/ {{ req_path if req_path else '' }}</span>
-        </div>
+        <!-- Clickable breadcrumb -->
+        <nav class="breadcrumb">
+            <a href="/">share-forge</a>
+            {% if req_path %}
+                {% set parts = req_path.split('/') %}
+                {% for part in parts %}
+                    <span class="sep">/</span>
+                    {% if not loop.last %}
+                        {% set partial = parts[:loop.index] | join('/') %}
+                        <a href="{{ url_for('handle_path', req_path=partial) }}">{{ part }}</a>
+                    {% else %}
+                        <span class="current">{{ part }}</span>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </nav>
+
         <div class="btn-group">
             <a href="{{ url_for('download_zip', req_path=req_path) }}" class="btn btn-primary">⬇ ZIP Download</a>
             <a href="/" class="btn btn-home">⌂ Home</a>
