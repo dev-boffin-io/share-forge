@@ -1,29 +1,37 @@
 #!/usr/bin/env bash
-# build.sh — share-forge PyInstaller build
-set -e
+# build.sh — share-forge Linux build script
+set -euo pipefail
 
 PROJECT="share-forge"
-DIST_DIR="dist"
 BIN_DIR="bin"
+DIST_DIR="dist"
+VENV=".venv"
 
-echo "================================================"
-echo "  $PROJECT — Build Script"
-echo "================================================"
+G="\033[32m"; R="\033[31m"; N="\033[0m"
+info()  { echo -e "${G}[*]${N} $*"; }
+error() { echo -e "${R}[!]${N} $*"; exit 1; }
 
-# ── venv ──────────────────────────────────────────
-if [ ! -d ".venv" ]; then
-    echo "[*] Creating .venv..."
-    python3 -m venv .venv
+# ── system deps check ─────────────────────────────────────────────────────────
+if ! python3 -c "import ensurepip" 2>/dev/null; then
+    info "Installing python3-venv and python3-pip..."
+    sudo apt-get install -y python3-venv python3-pip -q
 fi
 
-source .venv/bin/activate
-pip install --upgrade pip -q
-pip install -r requirements.txt pyinstaller -q
-echo "[*] Dependencies installed."
+# ── venv (recreate if pip missing) ───────────────────────────────────────────
+if [ ! -f "${VENV}/bin/pip" ]; then
+    info "Creating virtualenv..."
+    rm -rf "${VENV}"
+    python3 -m venv --clear "${VENV}"
+fi
 
-# ── GUI binary ────────────────────────────────────
-echo "[*] Building GUI binary..."
-pyinstaller \
+# ── install deps ──────────────────────────────────────────────────────────────
+info "Installing dependencies..."
+"${VENV}/bin/pip" install --upgrade pip -q
+"${VENV}/bin/pip" install -r requirements.txt pyinstaller -q
+
+# ── build GUI ─────────────────────────────────────────────────────────────────
+info "Building ${PROJECT} binary..."
+"${VENV}/bin/pyinstaller" \
     --onefile \
     --name "${PROJECT}" \
     --windowed \
@@ -34,31 +42,26 @@ pyinstaller \
     --hidden-import PyQt6.QtGui \
     --hidden-import flask \
     --hidden-import werkzeug \
-    main.py
+    main.py || error "GUI build failed."
 
-# ── CLI binary ────────────────────────────────────
-echo "[*] Building CLI binary..."
-pyinstaller \
+# ── build CLI ─────────────────────────────────────────────────────────────────
+info "Building ${PROJECT}-cli binary..."
+"${VENV}/bin/pyinstaller" \
     --onefile \
     --name "${PROJECT}-cli" \
     --add-data "core:core" \
     --hidden-import flask \
     --hidden-import werkzeug \
-    cli/main.py
+    cli/main.py || error "CLI build failed."
 
-# ── Move binaries to bin/ ─────────────────────────
-echo "[*] Moving binaries to ${BIN_DIR}/..."
+# ── move binaries ─────────────────────────────────────────────────────────────
+info "Moving binaries to ${BIN_DIR}/..."
 mkdir -p "${BIN_DIR}"
 rm -f "${BIN_DIR}/${PROJECT}" "${BIN_DIR}/${PROJECT}-cli"
 mv "${DIST_DIR}/${PROJECT}"     "${BIN_DIR}/${PROJECT}"
 mv "${DIST_DIR}/${PROJECT}-cli" "${BIN_DIR}/${PROJECT}-cli"
+chmod +x "${BIN_DIR}/${PROJECT}" "${BIN_DIR}/${PROJECT}-cli"
+rm -rf build dist *.spec
 
-# ── Cleanup ───────────────────────────────────────
-echo "[*] Cleaning up build artifacts..."
-rm -rf build dist
-rm -f "${PROJECT}.spec" "${PROJECT}-cli.spec"
-
-echo "================================================"
-echo "  Build complete:"
+info "Build complete:"
 ls -lh "${BIN_DIR}/${PROJECT}" "${BIN_DIR}/${PROJECT}-cli"
-echo "================================================"

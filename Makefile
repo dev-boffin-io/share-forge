@@ -1,14 +1,4 @@
 # Makefile — share-forge
-# Usage:
-#   make build        Build GUI + CLI binaries  → ./bin/
-#   make install      Install binary + .desktop entry
-#   make uninstall    Remove installed files
-#   make clean        Remove build artefacts
-#   make help         Show this message
-#
-# Options:
-#   DEBUG=1           Verbose PyInstaller output  (make build DEBUG=1)
-#   PREFIX=<path>     Install prefix              (default: ~/.local)
 
 PROJECT     := share-forge
 PREFIX      ?= $(HOME)/.local
@@ -20,9 +10,6 @@ ICON_THEME  := $(HOME)/.local/share/icons/hicolor
 BIN_DIR     := bin
 DIST_DIR    := dist
 VENV        := .venv
-PY          := $(VENV)/bin/python
-PIP         := $(VENV)/bin/pip
-PYINSTALLER := $(VENV)/bin/pyinstaller
 
 GUI_BIN     := $(BIN_DIR)/$(PROJECT)
 CLI_BIN     := $(BIN_DIR)/$(PROJECT)-cli
@@ -33,12 +20,10 @@ else
 	PYINST_FLAGS :=
 endif
 
-# ── Default target ────────────────────────────────────────────────────────────
-.PHONY: all
+.PHONY: all help deps build install uninstall clean
+
 all: help
 
-# ── Help ──────────────────────────────────────────────────────────────────────
-.PHONY: help
 help:
 	@echo ""
 	@echo "  share-forge — Build & Install"
@@ -55,22 +40,21 @@ help:
 	@echo "    PREFIX=<path>     Install prefix  (default: ~/.local)"
 	@echo ""
 
-# ── venv + deps ───────────────────────────────────────────────────────────────
-$(VENV)/bin/activate:
-	@echo "[*] Creating virtualenv..."
-	python3 -m venv $(VENV)
-	$(PIP) install --upgrade pip -q
-	$(PIP) install -r requirements.txt pyinstaller -q
-	@echo "[*] Dependencies installed."
+deps:
+	@echo "[*] Checking system deps..."
+	@python3 -c "import ensurepip" 2>/dev/null || sudo apt-get install -y python3-venv python3-pip -q
+	@if [ ! -f "$(VENV)/bin/pip" ]; then \
+		echo "[*] Creating virtualenv..."; \
+		rm -rf $(VENV); \
+		python3 -m venv --clear $(VENV); \
+	fi
+	@echo "[*] Installing Python deps..."
+	@$(VENV)/bin/pip install --upgrade pip -q
+	@$(VENV)/bin/pip install -r requirements.txt pyinstaller -q
 
-.PHONY: deps
-deps: $(VENV)/bin/activate
-
-# ── Build ─────────────────────────────────────────────────────────────────────
-.PHONY: build
 build: deps
 	@echo "[*] Building GUI binary..."
-	$(PYINSTALLER) $(PYINST_FLAGS) \
+	$(VENV)/bin/pyinstaller $(PYINST_FLAGS) \
 		--onefile \
 		--name "$(PROJECT)" \
 		--windowed \
@@ -83,7 +67,7 @@ build: deps
 		--hidden-import werkzeug \
 		main.py
 	@echo "[*] Building CLI binary..."
-	$(PYINSTALLER) $(PYINST_FLAGS) \
+	$(VENV)/bin/pyinstaller $(PYINST_FLAGS) \
 		--onefile \
 		--name "$(PROJECT)-cli" \
 		--add-data "core:core" \
@@ -94,14 +78,13 @@ build: deps
 	@rm -f $(GUI_BIN) $(CLI_BIN)
 	@mv $(DIST_DIR)/$(PROJECT)     $(GUI_BIN)
 	@mv $(DIST_DIR)/$(PROJECT)-cli $(CLI_BIN)
+	@chmod +x $(GUI_BIN) $(CLI_BIN)
 	@rm -rf build dist *.spec
 	@echo ""
 	@echo "[✓] Build complete:"
 	@ls -lh $(GUI_BIN) $(CLI_BIN)
 	@echo ""
 
-# ── Install ───────────────────────────────────────────────────────────────────
-.PHONY: install
 install:
 	@test -f $(GUI_BIN) || { echo "[!] Run 'make build' first."; exit 1; }
 	@echo "[*] Installing binaries to $(BINDIR)..."
@@ -109,20 +92,14 @@ install:
 	@cp $(GUI_BIN)  $(BINDIR)/$(PROJECT)
 	@cp $(CLI_BIN)  $(BINDIR)/$(PROJECT)-cli
 	@chmod +x $(BINDIR)/$(PROJECT) $(BINDIR)/$(PROJECT)-cli
-
 	@echo "[*] Installing icon..."
 	@mkdir -p $(ICONDIR)
 	@cp assets/$(PROJECT).png $(ICONDIR)/$(PROJECT).png
 	@if command -v gtk-update-icon-cache >/dev/null 2>&1; then \
 		gtk-update-icon-cache -f -t $(ICON_THEME); \
-		echo "[✓] Icon cache updated."; \
 	elif command -v gtk4-update-icon-cache >/dev/null 2>&1; then \
 		gtk4-update-icon-cache -f -t $(ICON_THEME); \
-		echo "[✓] Icon cache updated (gtk4)."; \
-	else \
-		echo "[~] gtk-update-icon-cache not found — icon may not appear immediately."; \
 	fi
-
 	@echo "[*] Installing .desktop entry..."
 	@mkdir -p $(APPDIR)
 	@printf '[Desktop Entry]\nVersion=1.0\nType=Application\nName=Share Forge\nGenericName=LAN File Server\nComment=Browse, upload, and download files over LAN\nExec=%s\nIcon=%s\nTerminal=false\nCategories=Network;FileTransfer;\nKeywords=share;file;lan;server;network;\nStartupNotify=true\n' \
@@ -132,7 +109,6 @@ install:
 	@if command -v update-desktop-database >/dev/null 2>&1; then \
 		update-desktop-database $(APPDIR); \
 	fi
-
 	@echo ""
 	@echo "[✓] Installed:"
 	@echo "    Binary  →  $(BINDIR)/$(PROJECT)"
@@ -141,12 +117,9 @@ install:
 	@echo "    Desktop →  $(APPDIR)/$(PROJECT).desktop"
 	@echo ""
 
-# ── Uninstall ─────────────────────────────────────────────────────────────────
-.PHONY: uninstall
 uninstall:
 	@echo "[*] Removing installed files..."
-	@rm -f $(BINDIR)/$(PROJECT)
-	@rm -f $(BINDIR)/$(PROJECT)-cli
+	@rm -f $(BINDIR)/$(PROJECT) $(BINDIR)/$(PROJECT)-cli
 	@rm -f $(APPDIR)/$(PROJECT).desktop
 	@rm -f $(ICONDIR)/$(PROJECT).png
 	@if command -v gtk-update-icon-cache >/dev/null 2>&1; then \
@@ -157,8 +130,6 @@ uninstall:
 	fi
 	@echo "[✓] Uninstalled."
 
-# ── Clean ─────────────────────────────────────────────────────────────────────
-.PHONY: clean
 clean:
 	@echo "[*] Cleaning build artefacts..."
 	@rm -rf build dist $(BIN_DIR) *.spec
