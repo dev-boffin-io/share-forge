@@ -5,7 +5,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Share-Forge | /{{ req_path }}</title>
+    <title>{{ root_name }}{% if req_path %} / {{ req_path }}{% endif %}</title>
     <style>
         :root {
             --bg: #0f1117;
@@ -108,7 +108,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="header">
         <!-- Clickable breadcrumb -->
         <nav class="breadcrumb">
-            <a href="/">share-forge</a>
+            <a href="/">{{ root_name }}</a>
             {% if req_path %}
                 {% set parts = req_path.split('/') %}
                 {% for part in parts %}

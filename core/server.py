@@ -89,8 +89,9 @@ def create_app(shared_dir: str) -> Flask:
 
         files = _list_dir(abs_path, req_path)
         parent_dir = os.path.dirname(req_path) if req_path else ''
+        root_name = os.path.basename(shared_dir)
         return render_template_string(
-            HTML_TEMPLATE, files=files, req_path=req_path, parent_dir=parent_dir
+            HTML_TEMPLATE, files=files, req_path=req_path, parent_dir=parent_dir, root_name=root_name
         )
 
     @app.route('/download_file/<path:req_path>')
