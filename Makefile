@@ -96,9 +96,13 @@ install:
 	@mkdir -p $(ICONDIR)
 	@cp assets/$(PROJECT).png $(ICONDIR)/$(PROJECT).png
 	@if command -v gtk-update-icon-cache >/dev/null 2>&1; then \
-		gtk-update-icon-cache -f -t $(ICON_THEME); \
+		gtk-update-icon-cache -f -t $(ICON_THEME) 2>/dev/null || true; \
+		echo "[~] Icon cache updated (or skipped)."; \
 	elif command -v gtk4-update-icon-cache >/dev/null 2>&1; then \
-		gtk4-update-icon-cache -f -t $(ICON_THEME); \
+		gtk4-update-icon-cache -f -t $(ICON_THEME) 2>/dev/null || true; \
+		echo "[~] Icon cache updated (gtk4, or skipped)."; \
+	else \
+		echo "[~] gtk-update-icon-cache not found — icon may not appear immediately."; \
 	fi
 	@echo "[*] Installing .desktop entry..."
 	@mkdir -p $(APPDIR)
@@ -107,7 +111,7 @@ install:
 		> $(APPDIR)/$(PROJECT).desktop
 	@chmod +x $(APPDIR)/$(PROJECT).desktop
 	@if command -v update-desktop-database >/dev/null 2>&1; then \
-		update-desktop-database $(APPDIR); \
+		update-desktop-database $(APPDIR) 2>/dev/null || true; \
 	fi
 	@echo ""
 	@echo "[✓] Installed:"
