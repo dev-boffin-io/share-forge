@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QSpinBox, QTextEdit,
     QFileDialog, QGroupBox, QStatusBar, QMessageBox,
-    QScrollArea, QFrame, QSystemTrayIcon, QMenu
+    QScrollArea, QFrame, QSystemTrayIcon, QMenu, QCheckBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QUrl
 from PyQt6.QtGui import QDesktopServices, QFont, QIcon, QPixmap, QPainter, QColor, QAction
@@ -39,11 +39,12 @@ class ServerThread(QThread):
     log_signal   = pyqtSignal(str)
     error_signal = pyqtSignal(str)
 
-    def __init__(self, directory: str, host: str, port: int):
+    def __init__(self, directory: str, host: str, port: int, show_all: bool = False):
         super().__init__()
         self.directory = directory
         self.host      = host
         self.port      = port
+        self.show_all  = show_all
         self._server   = None
 
     def run(self):
@@ -51,7 +52,7 @@ class ServerThread(QThread):
         from werkzeug.serving import make_server
         logging.getLogger('werkzeug').setLevel(logging.WARNING)
         try:
-            app = create_app(self.directory)
+            app = create_app(self.directory, show_all=self.show_all)
             self._server = make_server(self.host, self.port, app)
             self.log_signal.emit(f"[+] :{self.port}  {self.directory}")
             self._server.serve_forever()
@@ -74,11 +75,12 @@ class ServerThread(QThread):
 class ServerCard(QFrame):
     stopped = pyqtSignal(int)   # emits port when stopped
 
-    def __init__(self, directory: str, port: int, local_ip: str, parent=None):
+    def __init__(self, directory: str, port: int, local_ip: str, show_all: bool = False, parent=None):
         super().__init__(parent)
         self.port      = port
         self.directory = directory
-        self._thread   = ServerThread(directory, "0.0.0.0", port)
+        self.show_all  = show_all
+        self._thread   = ServerThread(directory, "0.0.0.0", port, show_all=show_all)
         self._thread.log_signal.connect(self._on_log)
         self._thread.error_signal.connect(self._on_error)
         self._thread.finished.connect(self._on_thread_done)
@@ -111,6 +113,11 @@ class ServerCard(QFrame):
         self.stop_btn.clicked.connect(self.stop_server)
 
         top.addWidget(port_lbl)
+        if self.show_all:
+            all_badge = QLabel("SHOW ALL")
+            all_badge.setFont(QFont(MONO, SZ_CARD - 3, QFont.Weight.Bold))
+            all_badge.setStyleSheet("color: #e0a05c; border: 1px solid #6a4a2a; border-radius: 4px; padding: 2px 6px;")
+            top.addWidget(all_badge)
         top.addWidget(dir_lbl, 1)
         top.addWidget(self.stop_btn)
         layout.addLayout(top)
@@ -253,6 +260,17 @@ class ShareForgeWindow(QMainWindow):
         port_row.addStretch()
         cfg.addLayout(port_row)
 
+        # show all (no ignore)
+        show_all_row = QHBoxLayout()
+        show_all_lbl = QLabel("")
+        show_all_lbl.setFixedWidth(170)
+        self.show_all_chk = QCheckBox("Show all — no ignore rules (includes dotfiles, .git, node_modules, __pycache__, etc.)")
+        self.show_all_chk.setFont(QFont(MONO, SZ_LABEL - 2))
+        show_all_row.addWidget(show_all_lbl)
+        show_all_row.addWidget(self.show_all_chk)
+        show_all_row.addStretch()
+        cfg.addLayout(show_all_row)
+
         root.addWidget(cfg_group)
 
         # ── start button ──
@@ -360,6 +378,13 @@ class ShareForgeWindow(QMainWindow):
             }
             QLineEdit:focus, QSpinBox:focus { border-color: #5c8aff; }
 
+            QCheckBox { color: #9aa0c0; spacing: 8px; }
+            QCheckBox::indicator {
+                width: 20px; height: 20px; border: 1px solid #2a2d3a;
+                border-radius: 4px; background: #1a1d27;
+            }
+            QCheckBox::indicator:checked { background: #5c8aff; border-color: #5c8aff; }
+
             QPushButton {
                 background: #1a1d27; color: #e2e4ef; border: 1px solid #2a2d3a;
                 border-radius: 8px; padding: 8px 16px; font-size: 22px;
@@ -458,7 +483,8 @@ class ShareForgeWindow(QMainWindow):
                 return
 
         local_ip = get_local_ip()
-        card = ServerCard(directory, port, local_ip, self)
+        show_all = self.show_all_chk.isChecked()
+        card = ServerCard(directory, port, local_ip, show_all=show_all, parent=self)
         card.stopped.connect(self._on_card_stopped)
         self._cards[port] = card
 

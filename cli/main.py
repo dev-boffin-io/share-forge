@@ -72,6 +72,11 @@ def parse_args():
         "--auto-port", action="store_true",
         help="Auto-select next free port if requested port is in use"
     )
+    parser.add_argument(
+        "-a", "--show-all", action="store_true",
+        help="Expose everything with no ignore rules (includes dotfiles, .git, "
+             "node_modules, __pycache__, etc.)"
+    )
     return parser.parse_args()
 
 
@@ -112,10 +117,12 @@ def main():
     print(f"  Directory : {directory}")
     print(f"  Local     : http://127.0.0.1:{port}")
     print(f"  Network   : http://{local_ip}:{port}")
+    if args.show_all:
+        print("  Mode      : SHOW ALL (no ignore rules — everything exposed)")
     print("  Press Ctrl+C to stop")
     print("=" * 52)
 
-    app = create_app(directory)
+    app = create_app(directory, show_all=args.show_all)
     try:
         app.run(host=args.host, port=port, debug=False, use_reloader=False)
     except KeyboardInterrupt:

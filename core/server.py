@@ -43,8 +43,15 @@ def _get_mimetype(filename: str, force_download: bool = False) -> str:
     return 'text/plain; charset=utf-8'
 
 
-def create_app(shared_dir: str) -> Flask:
-    """Flask app factory. shared_dir = root directory to serve."""
+def create_app(shared_dir: str, show_all: bool = False) -> Flask:
+    """Flask app factory. shared_dir = root directory to serve.
+
+    show_all: when True, disables all ignore filtering (IGNORED_DIRS and
+    dotfiles/dotdirs) so every file/folder underneath shared_dir is exposed.
+    The self-binary exclusion (to avoid serving the running .exe itself)
+    still applies regardless, since that isn't an "ignore rule" — it's
+    there to stop the app from accidentally sharing/zipping itself.
+    """
     app = Flask(__name__)
     shared_dir = os.path.abspath(shared_dir)
 
@@ -59,7 +66,7 @@ def create_app(shared_dir: str) -> Flask:
     def _list_dir(abs_path: str, req_path: str) -> list[dict]:
         entries = []
         for name in sorted(os.listdir(abs_path)):
-            if name in IGNORED_DIRS or name.startswith('._') or name.startswith('.'):
+            if not show_all and (name in IGNORED_DIRS or name.startswith('._') or name.startswith('.')):
                 continue
             if name in _SELF_BINARY_NAMES:
                 continue
@@ -116,7 +123,8 @@ def create_app(shared_dir: str) -> Flask:
         memory_file = io.BytesIO()
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             for root, dirs, files in os.walk(abs_path):
-                dirs[:] = [d for d in dirs if d not in IGNORED_DIRS and not d.startswith('.')]
+                if not show_all:
+                    dirs[:] = [d for d in dirs if d not in IGNORED_DIRS and not d.startswith('.')]
                 for file in files:
                     if os.path.basename(file) in _SELF_BINARY_NAMES:
                         continue
