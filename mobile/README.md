@@ -13,7 +13,7 @@ Desktop pieces that don't map to Android:
 |-----------------------------------|-------------------------------------------------------------|
 | Flask app (`core/server.py`)      | `shelf` server, same routes (`lib/server.dart`)             |
 | Jinja2 `HTML_TEMPLATE`             | same HTML/CSS, string-built (`lib/template.dart`)            |
-| System tray, multi-port `ServerCard`s | single start/stop screen + persistent notification       |
+| System tray, multi-port `ServerCard`s | single screen, same multi-server model — a `New Server` form (directory, port with a live free/in-use check, "Show all") plus an `Active Servers` list, one card per running port with its own Local/Network URL, Open-in-Browser, and log |
 | Runs as long as the process is up | `flutter_foreground_task` keeps it alive while backgrounded |
 | Any folder via a file dialog       | any folder via `file_picker`, gated behind "All files access" (`MANAGE_EXTERNAL_STORAGE`) — needed because the server reads/writes real filesystem paths, same as the desktop code |
 | `io.BytesIO` in-memory ZIP         | `ZipFileEncoder` streamed to a temp file — avoids buffering a whole folder in RAM on a phone |
