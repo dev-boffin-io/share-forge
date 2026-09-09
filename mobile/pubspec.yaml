@@ -1,0 +1,38 @@
+name: share_forge
+description: Share Forge — serve a folder over HTTP from your phone.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
+  shelf_multipart: ^2.1.0
+  archive: ^3.6.1
+  mime: ^1.0.5
+  path: ^1.9.0
+  network_info_plus: ^5.0.3
+  file_picker: ^8.0.0
+  permission_handler: ^11.3.1
+  flutter_foreground_task: ^8.10.4
+  flutter_launcher_icons: ^0.14.1
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/icon.png
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"

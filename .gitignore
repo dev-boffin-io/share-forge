@@ -14,8 +14,8 @@ var/
 sdist/
 develop-eggs/
 .installed.cfg
-lib/
-lib64/
+/lib/
+/lib64/
 MANIFEST
 
 # ── Virtual environments ───────────────────────────
@@ -73,3 +73,14 @@ $RECYCLE.BIN/
 bin/
 share-forge
 share-forge-cli
+
+# ── Flutter / Dart (mobile/) ──────────────────────
+mobile/.dart_tool/
+mobile/.packages
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/android/
+mobile/ios/
+mobile/build/
+mobile/*.iml
+
