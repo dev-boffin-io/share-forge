@@ -17,6 +17,30 @@ void main() {
   runApp(const ShareForgeApp());
 }
 
+// Registered as the foreground service's callback so the notification's
+// "Stop" button works even while the app is backgrounded. It only relays
+// the press back to the main isolate — the server itself still runs there.
+@pragma('vm:entry-point')
+void _startCallback() {
+  FlutterForegroundTask.setTaskHandler(_NotificationTaskHandler());
+}
+
+class _NotificationTaskHandler extends TaskHandler {
+  @override
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {}
+
+  @override
+  void onRepeatEvent(DateTime timestamp) {}
+
+  @override
+  Future<void> onDestroy(DateTime timestamp, bool isTimeout) async {}
+
+  @override
+  void onNotificationButtonPressed(String id) {
+    if (id == 'stop_all') FlutterForegroundTask.sendDataToMain('stop_all');
+  }
+}
+
 // ── theme (matches gui/main_window.py's dark palette) ──────────────────────
 const _bg = Color(0xFF0F1117);
 const _surface = Color(0xFF1A1D27);
@@ -49,11 +73,12 @@ class ShareForgeApp extends StatelessWidget {
 class _RunningServer {
   final ShareForgeServer server;
   final String? localIp;
+  final int port; // captured at start — server.port becomes null after stop()
   final List<String> log = [];
 
-  _RunningServer({required this.server, required this.localIp});
+  _RunningServer({required this.server, required this.localIp})
+      : port = server.port!;
 
-  int get port => server.port!;
   String get directory => server.sharedDir;
   bool get showAll => server.showAll;
   String get localUrl => 'http://127.0.0.1:$port';
@@ -83,13 +108,38 @@ class _HomePageState extends State<HomePage> {
     _initForegroundTask();
     _checkPortLive();
     _portController.addListener(_checkPortLive);
+    FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
+    // Guard against an orphaned notification from a previous crash — on a
+    // fresh launch _running is always empty, so nothing here means nothing
+    // should still be foregrounded.
+    FlutterForegroundTask.isRunningService.then((running) {
+      if (running) FlutterForegroundTask.stopService();
+    });
   }
 
   @override
   void dispose() {
+    FlutterForegroundTask.removeTaskDataCallback(_onReceiveTaskData);
     _portController.removeListener(_checkPortLive);
     _portController.dispose();
     super.dispose();
+  }
+
+  void _onReceiveTaskData(Object data) {
+    if (data == 'stop_all') _stopAllServers();
+  }
+
+  Future<void> _stopAllServers() async {
+    setState(() => _busy = true);
+    for (final entry in List.of(_running)) {
+      await entry.server.stop();
+    }
+    await FlutterForegroundTask.stopService();
+    setState(() {
+      _running.clear();
+      _busy = false;
+    });
+    _checkPortLive();
   }
 
   Future<void> _initForegroundTask() async {
@@ -244,6 +294,8 @@ class _HomePageState extends State<HomePage> {
       await FlutterForegroundTask.startService(
         notificationTitle: 'Share Forge',
         notificationText: text,
+        notificationButtons: const [NotificationButton(id: 'stop_all', text: 'Stop')],
+        callback: _startCallback,
       );
     } else {
       await FlutterForegroundTask.updateService(notificationText: text);
